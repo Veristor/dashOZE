@@ -319,7 +319,7 @@ setupKSEDemandControls() {
     getGenerationForecastDatasets() {
     return [
         {
-            label: 'JW RB (zak.)',
+            label: 'JW RB',
             data: [],
             backgroundColor: 'rgba(173, 216, 230, 0.6)',
             borderColor: 'rgba(173, 216, 230, 1)',
@@ -328,7 +328,7 @@ setupKSEDemandControls() {
             stack: 'generation' // Dodaj stack
         },
         {
-            label: 'Spoza RB (JGa+JGO)',
+            label: 'Spoza RB',
             data: [],
             backgroundColor: 'rgba(192, 192, 192, 0.6)',
             borderColor: 'rgba(192, 192, 192, 1)',
@@ -2766,4 +2766,5 @@ window.renderForecastKSE = function(data, containerId = 'generation-forecast-cha
 };
 
 console.log('✅ Chart Manager loaded successfully');
+
 
