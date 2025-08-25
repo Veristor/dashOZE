@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enspirion Engineering Dashboard - PV Monitoring</title>
+    
+    <!-- Meta tags for PWA -->
+    <meta name="description" content="Professional engineering dashboard for PV system monitoring">
+    <meta name="theme-color" content="#722F37">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/charts.css">
+    <link rel="stylesheet" href="assets/css/mobile.css">
+    <link rel="stylesheet" href="assets/css/engineering.css">
+    <link rel="stylesheet" href="assets/css/analysis.css">
+    
+    <!-- Preload critical JavaScript -->
+    <link rel="preload" href="assets/js/app.js" as="script">
+    <link rel="preload" href="assets/js/pse-api.js" as="script">
+ 
+
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="enspirion-logo">
+                <span class="logo-icon">⚡</span>
+                <h2>Enspirion</h2>
+                <p>Engineering Dashboard</p>
+            </div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loading-text">Łączenie z PSE API...</div>
+            <div class="loading-progress">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>⚡ Enspirion Engineering Dashboard</h1>
+                    <div class="header-subtitle">Real-time System Monitoring</div>
+                </div>
+                <div class="header-right">
+                    <!-- Real-time indicators -->
+                    <div class="realtime-indicators">
+                        <div class="indicator-item">
+                            <span class="indicator-label">Generacja PV:</span>
+                            <span class="indicator-value" id="pv-total-now">-- MW</span>
+                        </div>
+                        <div class="indicator-item">
+                            <span class="indicator-label">Obciążenie KSE:</span>
+                            <span class="indicator-value" id="kse-load-now">-- MW</span>
+                        </div>
+                        <div class="indicator-item">
+                            <span class="indicator-label">Aktualne pokrycie zapotrzebowania przez PV :</span>
+                            <span class="indicator-value" id="pv-share-now">--%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Indicators -->
+                    <div class="status-indicators">
+                        <div class="status-item">
+                            <span class="status-dot" id="api-status-dot"></span>
+                            <span id="api-status-text">Łączenie...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-dot" id="data-status-dot"></span>
+                            <span id="last-update-text">Aktualizacja: --:--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="dashboard-nav">
+            <div class="nav-container">
+                <button class="nav-tab active" data-view="monitoring">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Monitoring</span>
+                </button>
+                <button class="nav-tab" data-view="analysis">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">Prognozy OZE</span>
+                </button>
+                <button class="nav-tab" data-view="constraints">
+                    <span class="nav-icon">⚠️</span>
+                    <span class="nav-label">Rezerwy mocy</span>
+                </button>
+                <button class="nav-tab" data-view="grid">
+                    <span class="nav-icon">🔌</span>
+                    <span class="nav-label">Zapotrzebowanie mocy</span>
+                </button>
+                <button class="nav-tab" data-view="history">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">Historia</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- Monitoring Section -->
+            <section id="monitoring-section" class="dashboard-section active">
+                <!-- Technical KPIs -->
+                <div class="kpis-section">
+                    <div class="kpi-card technical">
+                        <div class="kpi-header">
+                            <span class="kpi-icon">⚡</span>
+                            <span class="kpi-title">Generacja PV</span>
+                        </div>
+                        <div class="kpi-value" id="pv-generation">--,--- MW</div>
+                        <div class="kpi-subtitle">Całkowita moc PV w KSE</div>
+                        <div class="kpi-trend" id="pv-trend">
+                            <span class="trend-icon">→</span>
+                            <span class="trend-value">-- MW/h</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card technical">
+                        <div class="kpi-header">
+                            <span class="kpi-icon">🔌</span>
+                            <span class="kpi-title">Obciążenie KSE</span>
+                        </div>
+                        <div class="kpi-value" id="system-load">--,--- MW</div>
+                        <div class="kpi-subtitle">Bieżące zapotrzebowanie</div>
+                        <div class="kpi-trend" id="load-trend">
+                            <span class="trend-icon">→</span>
+                            <span class="trend-value">-- MW/h</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card technical">
+                        <div class="kpi-header">
+                            <span class="kpi-icon">📊</span>
+                            <span class="kpi-title">Udział PV</span>
+                        </div>
+                        <div class="kpi-value" id="pv-percentage">--.-%</div>
+                        <div class="kpi-subtitle">Pokrycie zapotrzebowania przez PV</div>
+                        <div class="kpi-trend" id="percentage-trend">
+                            <span class="trend-icon">→</span>
+                            <span class="trend-value">-- pp</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card alert">
+                        <div class="kpi-header">
+                            <span class="kpi-icon">⚠️</span>
+                            <span class="kpi-title">Ryzyko wezwania</span>
+                        </div>
+                        <div class="kpi-value" id="">-</div>
+                        <div class="kpi-subtitle"></div>
+                        <div class="kpi-trend" id="">
+                        
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Charts Grid -->
+                <div class="charts-grid">
+                    <!-- Chart 1: Aktualna generacja i zapotrzebowanie KSE -->
+<div class="chart-container realtime-chart">
+    <div class="chart-header">
+        <div class="chart-title">
+            <span class="chart-icon">📈</span>
+            <span>Aktualna generacja i zapotrzebowanie KSE</span>
+        </div>
+    </div>
+    <div class="chart-content">
+        <canvas id="generation-forecast-chart"></canvas>
+    </div>
+</div>
+
+                    <!-- Chart 2: Grid Stability Indicators -->
+                    <div class="chart-container pv-distribution-chart">
+    <div class="chart-header">
+        <div class="chart-title">
+            <span class="chart-icon">☀️</span>
+            <span>Analiza Generacji PV i Udział w KSE</span>
+        </div>
+        <div class="chart-controls">
+           
+        </div>
+    </div>
+    <div class="chart-content">
+        <canvas id="pv-distribution-chart" width="800" height="300"></canvas>
+        <div class="pv-statistics" id="pv-stats-box">
+            <div class="stat-row">
+                <span class="stat-label">Aktualna generacja PV:</span>
+                <span class="stat-value" id="current-pv-gen">-- MW</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Wykorzystanie mocy zainstalowanej:</span>
+                <span class="stat-value" id="current-pv-share">--%</span>
+            </div>
+            <div class="stat-row" style="border-top: 1px solid #e5e7eb; padding-top: 6px; margin-top: 6px;">
+                <span class="stat-label" style="font-size: 0.75rem;">Moc zainstalowana PV:</span>
+                <span class="stat-value" style="font-size: 0.75rem;">22 636 MW</span>
+            </div>
+        </div>
+        <!-- Loading powinien być WEWNĄTRZ chart-content, nie jako osobny div -->
+        <div class="chart-loading" id="pv-distribution-loading" style="display: none;">
+            <div class="loading-spinner small"></div>
+            <span>Ładowanie danych generacji PV...</span>
+        </div>
+    </div>
+</div>
+
+                    <!-- Chart 3: PV Distribution Analysis -->
+
+
+                <!-- Chart 5 Ryzyka - Dodaj po wykresie "Ograniczenia Przesyłowe" -->
+<!-- Podmień całą sekcję risk-assessment-chart na: -->
+<div class="chart-container risk-assessment-chart">
+    <div class="chart-header">
+        <div class="chart-title">
+            <span class="chart-icon">⚡</span>
+            <span>Ryzyko Wezwania do Redukcji</span>
+        </div>
+    </div>
+    <div class="chart-content">
+        <div id="risk-assessment-wrapper">
+            <!-- Scrollowalny kontener tylko dla mapy -->
+            <div id="risk-assessment-container">
+                <div id="risk-heatmap-grid" class="risk-heatmap"></div>
+            </div>
+            <!-- Legenda poza scrollem -->
+            <div class="risk-legend">
+                <div class="legend-title">Poziom Ryzyka</div>
+                <div class="risk-legend-items">
+                    <div class="risk-legend-item">
+                        <div class="risk-color low"></div>
+                        <span>Niskie</span>
+                    </div>
+                    <div class="risk-legend-item">
+                        <div class="risk-color medium"></div>
+                        <span>Średnie</span>
+                    </div>
+                    <div class="risk-legend-item">
+                        <div class="risk-color high"></div>
+                        <span>Wysokie</span>
+                    </div>
+                    <div class="risk-legend-item">
+                        <div class="risk-color critical"></div>
+                        <span>Krytyczne</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Panel szczegółów -->
+            <div id="risk-details" class="risk-details">
+                <h4>Analiza Ryzyka</h4>
+                <div class="risk-info-message">
+                    💡 Kliknij na dowolną komórkę w mapie ryzyka, aby zobaczyć szczegółową analizę
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                <!-- Real-time Data Table -->
+                <div class="data-table-container">
+    <div class="table-header">
+        <h3>📊 Dane Real-time</h3>
+        <div class="table-controls">
+            <button class="btn-small" id="export-data">📥 Export CSV</button>
+            
+        </div>
+    </div>
+    <div class="table-wrapper">
+        <table class="realtime-table">
+            <thead>
+                <tr>
+                    <th>Czas</th>
+                    <th>Gen. PV [MW]</th>
+                    <th>Zapot. KSE [MW]</th>
+                    <th>Udział PV [%]</th>
+                    <th>Gradient [MW/min]</th>
+                </tr>
+            </thead>
+            <tbody id="realtime-tbody">
+                <!-- Dynamically populated -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Cumulative Redispatch Chart -->
+    <!-- Chart 4: Redispatch Cumulative Chart -->
+<div class="chart-container redispatch-chart">
+    <div class="chart-header">
+        <div class="chart-title">
+            <span class="chart-icon">⚡</span>
+            <span>Skumulowane redysponowanie</span>
+        </div>
+        <div class="chart-controls">
+            <button class="refresh-chart-btn" data-chart="redispatch">🔄</button>
+        </div>
+    </div>
+    <div class="chart-content">
+        <canvas id="redispatch-cumulative-chart"></canvas>
+    </div>
+    <div class="chart-loading" id="redispatch-loading">
+        <div class="loading-spinner small"></div>
+        <span>Ładowanie danych redysponowania...</span>
+    </div>
+</div>
+
+            </section>
+
+            <!-- Other Sections (Hidden by default) -->
+           <section id="analysis-section" class="dashboard-section">
+    <div class="section-header">
+        <h2>📈 Analiza Techniczna</h2>
+        <div class="section-description">
+            Prognozy generacji OZE i zapotrzebowania na najbliższe dni robocze
+        </div>
+    </div>
+    <div class="analysis-content">
+        <!-- Kontrolki -->
+        <div class="analysis-controls">
+            <div class="control-group">
+                <label>Okres prognozy:</label>
+                <select id="forecast-period">
+                    <option value="1">1 dzień</option>
+                    <option value="3" selected>3 dni</option>
+                    <option value="5">5 dni</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="show-weekends"> 
+                    Pokaż weekendy
+                </label>
+            </div>
+            <button class="action-btn btn-primary" id="refresh-forecast">
+                🔄 Odśwież prognozy
+            </button>
+        </div>
+        
+
+
+        <!-- Wykres prognoz -->
+        <div class="chart-container forecast-chart">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">📊</span>
+                    <span>Prognozy generacji i zapotrzebowania</span>
+                </div>
+                <div class="chart-controls">
+                    <button class="chart-btn active" data-view="all">Wszystko</button>
+                    <button class="chart-btn" data-view="renewable">Tylko OZE</button>
+                    <button class="chart-btn" data-view="comparison">Porównanie</button>
+                </div>
+            </div>
+            <div class="chart-content">
+                <canvas id="forecast-chart"></canvas>
+            </div>
+            <div class="chart-loading" id="forecast-loading">
+                <div class="loading-spinner small"></div>
+                <span>Ładowanie prognoz...</span>
+            </div>
+        </div>
+        
+        <!-- Statystyki prognoz -->
+        <div class="forecast-statistics">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">☀️</div>
+            <div class="stat-content">
+                <div class="stat-value" id="forecast-total-pv">-- GWh</div>
+                <div class="stat-label">Prognozowana energia PV</div>
+                <div class="stat-subtitle">Suma dla okresu</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">💨</div>
+            <div class="stat-content">
+                <div class="stat-value" id="forecast-total-wind">-- GWh</div>
+                <div class="stat-label">Prognozowana energia wiatrowa</div>
+                <div class="stat-subtitle">Suma dla okresu</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🔋</div>
+            <div class="stat-content">
+                <div class="stat-value" id="forecast-avg-renewable">--%</div>
+                <div class="stat-label">Średni udział OZE</div>
+                <div class="stat-subtitle">Średnia z okresu</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+                <div class="stat-value" id="forecast-peak-demand">-- MW</div>
+                <div class="stat-label">Szczyt zapotrzebowania</div>
+                <div class="stat-subtitle">Najwyższa wartość</div>
+            </div>
+        </div>
+    </div>
+</div>
+        
+        <!-- Tabela szczegółowa -->
+        <div class="forecast-table-container">
+            <h3>📋 Szczegółowe prognozy godzinowe</h3>
+            <div class="table-wrapper">
+                <table class="forecast-table">
+                    <thead>
+                        <tr>
+                            <th>Data i godzina</th>
+                            <th>PV [MW]</th>
+                            <th>Wiatr [MW]</th>
+                            <th>Suma OZE [MW]</th>
+                            <th>Zapotrzebowanie [MW]</th>
+                            <th>Udział OZE [%]</th>
+                            <th>Rezerwa [MW]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="forecast-tbody">
+                        <!-- Dynamically populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+            <section id="constraints-section" class="dashboard-section">
+                <div class="section-header">
+                    <h2>⚠️ Ograniczenia Systemowe</h2>
+                    <div class="section-description">
+                        Monitoring ograniczeń przesyłowych i systemowych
+                    </div>
+                </div>
+                <div class="constraints-content">
+    <!-- Main Chart Container -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <h3>📊 Rezerwa Wymagana vs Prognozowana</h3>
+        </div>
+        <div id="constraints-chart" class="chart-container"></div>
+    </div>
+    
+    <!-- Statistics Grid -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+                <div class="stat-label">Średni Margines</div>
+                <div class="stat-value" id="avg-margin">-- MW</div>
+                <div class="stat-subtitle">Średnia z okresu</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-content">
+                <div class="stat-label">Min. Margines</div>
+                <div class="stat-value" id="min-margin">-- MW</div>
+                <div class="stat-subtitle">Najniższy w okresie</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-content">
+                <div class="stat-label">Pokrycie Rezerwy</div>
+                <div class="stat-value" id="coverage-percent">--%</div>
+                <div class="stat-subtitle">Stosunek rez./wym.</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">⏰</div>
+            <div class="stat-content">
+                <div class="stat-label">Krytyczna Godzina</div>
+                <div class="stat-value" id="critical-hour">--:--</div>
+                <div class="stat-subtitle">Najniższy margines</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Analysis -->
+    <div class="risk-analysis-card">
+        <h3>🔍 Analiza Ryzyka Niedoboru Rezerwy</h3>
+        <div id="risk-summary" class="risk-summary">
+            <div class="loading-spinner">Ładowanie analizy...</div>
+        </div>
+        
+        <!-- Risk Timeline -->
+        <div class="risk-timeline" id="risk-timeline">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+    
+    <!-- Alerts History -->
+    <div class="alerts-history-card">
+        <h3>📋 Historia Alertów (24h)</h3>
+        <div id="constraints-alerts-list" class="alerts-list">
+            <div class="no-alerts">Ładowanie historii alertów...</div>
+        </div>
+    </div>
+</div>
+            </section>
+
+          <section id="grid-section" class="dashboard-section">
+    <div class="section-header">
+        <h2>🔌 Stan Sieci</h2>
+        <div class="section-description">
+            Parametry sieci i przepływy mocy
+        </div>
+    </div>
+    <div class="grid-content">
+        <!-- Wykres zapotrzebowania KSE -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">⚡</span>
+                    <span>Zapotrzebowanie mocy KSE</span>
+                </div>
+                <div class="chart-controls">
+    
+                    <button class="refresh-chart-btn" data-chart="kse-demand">🔄</button>
+                </div>
+            </div>
+            <div class="chart-content">
+                <canvas id="kse-demand-chart"></canvas>
+            </div>
+            <div class="chart-loading" id="kse-demand-loading">
+                <div class="loading-spinner small"></div>
+                <span>Ładowanie danych zapotrzebowania...</span>
+            </div>
+        </div>
+        
+        <!-- Statystyki -->
+        <div class="demand-statistics">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Aktualne zapotrzebowanie</div>
+                        <div class="stat-value" id="current-demand">-- MW</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Prognoza (następna godzina)</div>
+                        <div class="stat-value" id="forecast-demand">-- MW</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Dokładność prognozy</div>
+                        <div class="stat-value" id="forecast-accuracy">--%</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Szczyt dnia</div>
+                        <div class="stat-value" id="peak-demand">-- MW</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+            <section id="history-section" class="dashboard-section">
+                <div class="section-header">
+                    <h2>📋 Historia</h2>
+                    <div class="section-description">
+                        Dane historyczne i trendy długoterminowe
+                    </div>
+                </div>
+                <div class="history-content">
+                    <!-- Historical data will be added here -->
+                    <div class="coming-soon">
+                        <span class="icon">🚧</span>
+                        <h3>W przygotowaniu</h3>
+                        <p>Analiza historyczna będzie dostępna wkrótce</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <div class="footer-actions">
+                        <button class="action-btn btn-primary" id="refresh-all-btn">
+                            <span class="btn-icon">🔄</span>
+                            <span class="btn-text">Odśwież</span>
+                        </button>
+                        <button class="action-btn btn-secondary" id="settings-btn">
+                            <span class="btn-icon">⚙️</span>
+                            <span class="btn-text">Ustawienia</span>
+                        </button>
+                        <label class="auto-refresh-toggle">
+                            <input type="checkbox" id="auto-refresh" checked>
+                            <span>Auto-refresh (30s)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="footer-right">
+                    <div class="footer-info">
+                        <div class="app-info">
+                            <span class="app-name">Enspirion Engineering Dashboard</span>
+                            <span class="app-version">v2.1.0</span>
+                        </div>
+                        <div class="system-info">
+                            <span class="api-info">PSE API: Live</span>
+                            <span class="update-info">Ostatnia aktualizacja: <span id="footer-last-update">--:--:--</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Błąd systemu</h3>
+                <button class="modal-close" id="error-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="error-message">Wystąpił nieoczekiwany błąd.</p>
+                <div class="error-details" id="error-details" style="display: none;">
+                    <details>
+                        <summary>Szczegóły techniczne</summary>
+                        <pre id="error-stack"></pre>
+                    </details>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn btn-primary" id="retry-btn">Spróbuj ponownie</button>
+                <button class="action-btn btn-secondary" id="dismiss-error-btn">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Ustawienia Dashboard</h3>
+                <button class="modal-close" id="settings-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>Odświeżanie danych</h4>
+                    <div class="setting-row">
+                        <label for="settings-refresh">Częstotliwość odświeżania:</label>
+                        <select id="settings-refresh">
+                            <option value="1000">1 sekunda</option>
+                            <option value="5000">5 sekund</option>
+                            <option value="10000">10 sekund</option>
+                            <option value="30000" selected>30 sekund</option>
+                            <option value="60000">1 minuta</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>
+                            <input type="checkbox" id="settings-sound" checked>
+                            Alerty dźwiękowe
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Wyświetlanie</h4>
+                    <div class="setting-row">
+                        <label for="settings-decimals">Miejsca po przecinku:</label>
+                        <select id="settings-decimals">
+                            <option value="0">0</option>
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>
+                            <input type="checkbox" id="settings-animations" checked>
+                            Animacje wykresów
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Alerty</h4>
+                    <div class="setting-row">
+                        <label for="settings-pv-alert">Alert przy PV powyżej (%):</label>
+                        <input type="number" id="settings-pv-alert" value="80" min="50" max="100" step="5">
+                    </div>
+                    <div class="setting-row">
+                        <label for="settings-gradient-alert">Alert gradient PV (MW/min):</label>
+                        <input type="number" id="settings-gradient-alert" value="100" min="50" max="500" step="10">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn btn-primary" id="save-settings-btn">Zapisz ustawienia</button>
+                <button class="action-btn btn-secondary" id="cancel-settings-btn">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <!-- WAŻNE: Najpierw Chart.js z CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/pse-api.js"></script>
+    <script src="assets/js/data-processor.js"></script>
+    <script src="assets/js/risk-calculator.js"></script>
+    <script src="assets/js/portfolio-calculator.js"></script>
+    <script src="assets/js/chart-manager.js"></script>
+    <script src="assets/js/ui-manager.js"></script>
+    <!-- Dodaj po risk-calculator.js -->
+    <script src="assets/js/redispatch-risk-scorer.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

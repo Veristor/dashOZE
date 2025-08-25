@@ -1,0 +1,254 @@
+{
+  "name": "enspirion-dashboard",
+  "version": "2.0.0",
+  "description": "Professional energy management dashboard for PV portfolio monitoring and redispatch risk analysis",
+  "main": "index.html",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "vite build",
+    "build:production": "NODE_ENV=production vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "serve": "serve -s dist -l 3000",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --watchAll=false",
+    "lighthouse": "lighthouse http://localhost:3000 --output html --output-path ./reports/lighthouse.html",
+    "lighthouse:ci": "lhci autorun",
+    "clean": "rimraf dist node_modules/.cache",
+    "clean:all": "rimraf dist node_modules node_modules/.cache",
+    "validate": "npm run lint && npm run format:check && npm run test:ci",
+    "deploy": "npm run build && gh-pages -d dist",
+    "deploy:github": "npm run build:production && gh-pages -d dist -b gh-pages",
+    "postinstall": "husky install",
+    "prepare": "husky install",
+    "security-audit": "npm audit --audit-level=moderate",
+    "security-fix": "npm audit fix",
+    "bundle-analyze": "vite-bundle-analyzer dist",
+    "precommit": "lint-staged",
+    "semantic-release": "semantic-release"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/enspirion/energy-dashboard.git"
+  },
+  "keywords": [
+    "energy",
+    "dashboard",
+    "photovoltaic",
+    "pv",
+    "solar",
+    "redispatch",
+    "risk-analysis",
+    "pse",
+    "poland",
+    "energy-management",
+    "portfolio",
+    "renewable-energy",
+    "pwa",
+    "professional"
+  ],
+  "author": {
+    "name": "Enspirion",
+    "email": "contact@enspirion.com",
+    "url": "https://enspirion.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/enspirion/energy-dashboard/issues"
+  },
+  "homepage": "https://enspirion.github.io/energy-dashboard",
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "@commitlint/cli": "^17.7.0",
+    "@commitlint/config-conventional": "^17.7.0",
+    "@lighthouse-ci/cli": "^0.12.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.2.0",
+    "@testing-library/dom": "^9.3.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "@testing-library/user-event": "^14.5.0",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-jest": "^27.4.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "gh-pages": "^6.0.0",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "lighthouse": "^11.1.0",
+    "lint-staged": "^14.0.0",
+    "prettier": "^3.0.0",
+    "rimraf": "^5.0.0",
+    "semantic-release": "^22.0.0",
+    "serve": "^14.2.0",
+    "vite": "^4.5.0",
+    "vite-bundle-analyzer": "^0.7.0",
+    "vite-plugin-pwa": "^0.16.0"
+  },
+  "dependencies": {
+    "date-fns": "^2.30.0"
+  },
+  "peerDependencies": {
+    "chart.js": "^4.4.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js",
+      "<rootDir>/src/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/**/*.test.js",
+      "!src/vendor/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 70,
+        "lines": 70,
+        "statements": 70
+      }
+    },
+    "moduleNameMapping": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "node": true,
+      "jest": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "prettier"
+    ],
+    "plugins": [
+      "prettier",
+      "jest"
+    ],
+    "rules": {
+      "prettier/prettier": "error",
+      "no-console": "warn",
+      "no-debugger": "error",
+      "no-unused-vars": "warn",
+      "prefer-const": "error",
+      "no-var": "error"
+    },
+    "globals": {
+      "EnspirionConfig": "readonly",
+      "PSEApiService": "readonly",
+      "PortfolioCalculator": "readonly",
+      "RiskCalculator": "readonly",
+      "EnspirionApp": "readonly"
+    }
+  },
+  "prettier": {
+    "semi": true,
+    "trailingComma": "es5",
+    "singleQuote": true,
+    "printWidth": 100,
+    "tabWidth": 2,
+    "useTabs": false,
+    "bracketSpacing": true,
+    "arrowParens": "always"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.css": [
+      "prettier --write"
+    ],
+    "*.html": [
+      "prettier --write"
+    ],
+    "*.md": [
+      "prettier --write"
+    ]
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ],
+    "rules": {
+      "type-enum": [
+        2,
+        "always",
+        [
+          "feat",
+          "fix",
+          "docs",
+          "style",
+          "refactor",
+          "perf",
+          "test",
+          "build",
+          "ci",
+          "chore",
+          "revert"
+        ]
+      ]
+    }
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "CHANGELOG.md",
+            "package.json"
+          ],
+          "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        }
+      ]
+    ]
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/sponsors/enspirion"
+  },
+  "files": [
+    "dist",
+    "src",
+    "assets",
+    "index.html",
+    "manifest.json",
+    "sw.js",
+    "README.md",
+    "LICENSE"
+  ]
+}

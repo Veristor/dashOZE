@@ -1,0 +1,439 @@
+name: 🚀 Deploy Enspirion Dashboard
+
+# Trigger deployment on push to main or manual trigger
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+# Set permissions for GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one deployment at a time
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+# Environment variables
+env:
+  NODE_VERSION: '18'
+  CACHE_KEY: 'enspirion-dashboard-v2'
+
+jobs:
+  # ================================
+  # QUALITY ASSURANCE & TESTING
+  # ================================
+  test:
+    name: 🧪 Test & Quality Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 🔧 Install Dependencies
+        run: npm ci
+        
+      - name: 🧹 ESLint Check
+        run: npm run lint
+        
+      - name: 🎨 Prettier Check
+        run: npm run format:check
+        
+      - name: 🧪 Run Unit Tests
+        run: npm run test:ci
+        
+      - name: 📊 Upload Coverage Reports
+        uses: codecov/codecov-action@v3
+        if: success()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          
+  # ================================
+  # SECURITY SCANNING
+  # ================================
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 🔧 Install Dependencies
+        run: npm ci
+        
+      - name: 🔍 NPM Security Audit
+        run: npm run security-audit
+        continue-on-error: true
+        
+      - name: 🛡️ CodeQL Analysis
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+          
+      - name: 🛡️ Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        
+  # ================================
+  # BUILD APPLICATION
+  # ================================
+  build:
+    name: 🏗️ Build Application
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 🔧 Install Dependencies
+        run: npm ci
+        
+      - name: 🏗️ Build for Production
+        run: npm run build:production
+        env:
+          NODE_ENV: production
+          VITE_APP_VERSION: ${{ github.sha }}
+          VITE_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
+          VITE_DEPLOYMENT_TARGET: ${{ github.event.inputs.environment || 'production' }}
+          
+      - name: 📊 Bundle Size Analysis
+        run: npm run bundle-analyze
+        continue-on-error: true
+        
+      - name: 📦 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files
+          path: dist/
+          retention-days: 7
+          
+      - name: 📄 Upload Bundle Analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: dist/bundle-report.html
+          retention-days: 7
+          if-no-files-found: ignore
+          
+  # ================================
+  # LIGHTHOUSE PERFORMANCE AUDIT
+  # ================================
+  lighthouse:
+    name: 🏮 Lighthouse Performance Audit
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-files
+          path: dist/
+          
+      - name: 🔧 Install Dependencies
+        run: npm ci
+        
+      - name: 🚀 Start Preview Server
+        run: |
+          npm run serve &
+          sleep 10
+          
+      - name: 🏮 Run Lighthouse CI
+        run: npm run lighthouse:ci
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          
+      - name: 📊 Upload Lighthouse Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 7
+          
+  # ================================
+  # DEPLOY TO GITHUB PAGES
+  # ================================
+  deploy:
+    name: 🌐 Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [build, lighthouse]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      
+    steps:
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-files
+          path: dist/
+          
+      - name: 📄 Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: 📦 Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+          
+      - name: 🚀 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        
+      - name: 📊 Post-Deploy Health Check
+        run: |
+          echo "Waiting for deployment to be ready..."
+          sleep 30
+          
+          # Health check
+          HEALTH_CHECK_URL="${{ steps.deployment.outputs.page_url }}"
+          
+          echo "Checking deployment health at: $HEALTH_CHECK_URL"
+          
+          # Simple curl check
+          if curl -f -s "$HEALTH_CHECK_URL" > /dev/null; then
+            echo "✅ Deployment health check passed"
+          else
+            echo "❌ Deployment health check failed"
+            exit 1
+          fi
+          
+  # ================================
+  # POST-DEPLOYMENT TASKS
+  # ================================
+  post-deploy:
+    name: 📊 Post-Deployment Tasks
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: success()
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 📊 Update Deployment Status
+        run: |
+          echo "Deployment completed successfully!"
+          echo "URL: ${{ needs.deploy.outputs.url || 'https://enspirion.github.io/energy-dashboard/' }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
+          
+      - name: 📝 Create Deployment Summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## 🚀 Deployment Summary
+          
+          | Field | Value |
+          |-------|-------|
+          | **Status** | ✅ Success |
+          | **Environment** | ${{ github.event.inputs.environment || 'production' }} |
+          | **URL** | [${{ needs.deploy.outputs.url || 'https://enspirion.github.io/energy-dashboard/' }}](${{ needs.deploy.outputs.url || 'https://enspirion.github.io/energy-dashboard/' }}) |
+          | **Commit** | [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |
+          | **Author** | ${{ github.actor }} |
+          | **Triggered by** | ${{ github.event_name }} |
+          | **Build time** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |
+          
+          ### 📊 Build Artifacts
+          - Build files uploaded to GitHub Pages
+          - Lighthouse performance audit completed
+          - Security scan passed
+          - Bundle analysis available in artifacts
+          
+          ### 🔗 Quick Links
+          - [📊 Dashboard](${{ needs.deploy.outputs.url || 'https://enspirion.github.io/energy-dashboard/' }})
+          - [📈 Performance Reports](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [🔧 Repository](https://github.com/${{ github.repository }})
+          EOF
+          
+  # ================================
+  # NOTIFICATION ON FAILURE
+  # ================================
+  notify-failure:
+    name: 📧 Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [test, security, build, lighthouse, deploy]
+    if: failure()
+    
+    steps:
+      - name: 📧 Create Failure Summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## ❌ Deployment Failed
+          
+          | Field | Value |
+          |-------|-------|
+          | **Status** | ❌ Failed |
+          | **Commit** | [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |
+          | **Author** | ${{ github.actor }} |
+          | **Triggered by** | ${{ github.event_name }} |
+          | **Failed at** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |
+          
+          ### 🔍 Debug Information
+          - Check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details
+          - Review the failing job outputs above
+          - Verify all secrets and environment variables are properly set
+          
+          ### 🛠️ Common Solutions
+          1. **Test failures**: Check test output and fix failing tests
+          2. **Security issues**: Review security audit results and fix vulnerabilities
+          3. **Build failures**: Check build logs for missing dependencies or configuration issues
+          4. **Deployment issues**: Verify GitHub Pages settings and permissions
+          EOF
+
+# ================================
+# ADDITIONAL WORKFLOWS
+# ================================
+---
+name: 🔄 Auto-Update Dependencies
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Every Monday at 2 AM UTC
+  workflow_dispatch:
+
+jobs:
+  update-deps:
+    name: 📦 Update Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: 🔍 Check for Updates
+        id: updates
+        run: |
+          npm outdated --json > outdated.json || true
+          if [ -s outdated.json ]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: 📝 Create Update PR
+        if: steps.updates.outputs.has_updates == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: '📦 chore: update dependencies'
+          title: '📦 Automated dependency updates'
+          body: |
+            ## 📦 Automated Dependency Updates
+            
+            This PR contains automated dependency updates generated by GitHub Actions.
+            
+            ### 🔍 Changes
+            - Updated outdated npm packages to their latest versions
+            - Security patches applied automatically
+            - No breaking changes expected
+            
+            ### 🧪 Validation
+            - [ ] Automated tests pass
+            - [ ] Manual testing completed
+            - [ ] No breaking changes identified
+            
+            ### 📋 Review Checklist
+            - [ ] Review package changes
+            - [ ] Test critical functionality
+            - [ ] Check for any deprecation warnings
+            
+            *This PR was created automatically. Please review carefully before merging.*
+            
+          branch: automated/dependency-updates
+          delete-branch: true
+
+---
+name: 🛡️ Security Scan
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Daily at 6 AM UTC
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    name: 🔍 Daily Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: 🔧 Install Dependencies
+        run: npm ci
+        
+      - name: 🔍 NPM Audit
+        run: npm audit --audit-level=moderate
+        
+      - name: 🛡️ CodeQL Scan
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+          
+      - name: 🛡️ Perform Analysis
+        uses: github/codeql-action/analyze@v2

@@ -1,0 +1,438 @@
+/**
+ * Enspirion Dashboard - Mobile Stylesheet
+ * Responsywne style dla urządzeń mobilnych
+ */
+
+/* ========================================
+   TABLET BREAKPOINT (1024px)
+======================================== */
+
+@media (max-width: 1024px) {
+    /* Header adjustments */
+    .dashboard-header {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: var(--spacing-lg);
+        text-align: center;
+    }
+    
+    .header-right {
+        width: 100%;
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .portfolio-config {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Navigation */
+    .nav-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+    
+    /* Main content */
+    .dashboard-main {
+        padding: var(--spacing-lg);
+    }
+    
+    /* KPI Cards */
+    .kpis-section {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-md);
+    }
+    
+    /* Charts */
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+    
+    /* Footer */
+    .footer-content {
+        flex-direction: column;
+        gap: var(--spacing-lg);
+        text-align: center;
+    }
+    
+    .footer-actions {
+        justify-content: center;
+    }
+}
+
+/* ========================================
+   MOBILE BREAKPOINT (768px)
+======================================== */
+
+@media (max-width: 768px) {
+    /* Base adjustments */
+    body {
+        font-size: var(--font-size-sm);
+    }
+    
+    /* Header */
+    .dashboard-header {
+        padding: var(--spacing-md);
+        position: relative;
+    }
+    
+    .header-left h1 {
+        font-size: var(--font-size-xl);
+    }
+    
+    .header-subtitle {
+        display: none;
+    }
+    
+    .status-indicators {
+        font-size: var(--font-size-xs);
+    }
+    
+    /* Navigation */
+    .dashboard-nav {
+        padding: var(--spacing-xs) 0;
+        position: sticky;
+        top: 0;
+        background: var(--bg-primary);
+        z-index: var(--z-sticky);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .nav-container {
+        padding: 0 var(--spacing-sm);
+        gap: var(--spacing-xs);
+    }
+    
+    .nav-tab {
+        min-width: auto;
+        padding: var(--spacing-sm);
+        font-size: var(--font-size-xs);
+    }
+    
+    .nav-icon {
+        font-size: var(--font-size-base);
+    }
+    
+    .nav-label {
+        font-size: 10px;
+    }
+    
+    /* Main content */
+    .dashboard-main {
+        padding: var(--spacing-md);
+    }
+    
+    /* KPI Cards */
+    .kpis-section {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .kpi-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .kpi-value {
+        font-size: var(--font-size-2xl);
+    }
+    
+    /* Charts */
+    .chart-container {
+        margin-bottom: var(--spacing-lg);
+        height: 300px;
+    }
+    
+    .chart-header {
+        padding: var(--spacing-md);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+    
+    .chart-title {
+        font-size: var(--font-size-sm);
+    }
+    
+    .chart-controls {
+        width: 100%;
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .chart-btn {
+        white-space: nowrap;
+        font-size: var(--font-size-xs);
+        padding: var(--spacing-xs) var(--spacing-sm);
+    }
+    
+    .chart-content {
+        padding: var(--spacing-md);
+        height: 250px;
+    }
+    
+    /* Modals */
+    .modal-content {
+        margin: var(--spacing-md);
+        max-height: calc(100vh - 2rem);
+        width: calc(100% - 2rem);
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: var(--spacing-lg);
+    }
+    
+    /* Footer */
+    .dashboard-footer {
+        padding: var(--spacing-md);
+    }
+    
+    .footer-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: var(--spacing-sm);
+    }
+    
+    .action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ========================================
+   SMALL MOBILE BREAKPOINT (480px)
+======================================== */
+
+@media (max-width: 480px) {
+    /* Header */
+    .header-left h1 {
+        font-size: var(--font-size-lg);
+    }
+    
+    .portfolio-config {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm);
+    }
+    
+    .portfolio-input {
+        width: 100%;
+        text-align: center;
+    }
+    
+    /* Navigation */
+    .nav-tab {
+        flex: 1;
+        min-width: 60px;
+    }
+    
+    .nav-label {
+        display: none;
+    }
+    
+    /* KPI Cards */
+    .kpi-card {
+        padding: var(--spacing-md);
+    }
+    
+    .kpi-header {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .kpi-value {
+        font-size: var(--font-size-xl);
+    }
+    
+    /* Charts */
+    .chart-container {
+        height: 250px;
+    }
+    
+    .chart-content {
+        padding: var(--spacing-sm);
+        height: 200px;
+    }
+    
+    /* Risk heatmap mobile optimization */
+    #risk-heatmap {
+        grid-template-columns: repeat(8, 1fr);
+        grid-template-rows: repeat(7, 1fr);
+        height: 150px;
+        font-size: 6px;
+    }
+    
+    .risk-cell {
+        font-size: 6px;
+    }
+    
+    /* PV Metrics */
+    .pv-metrics {
+        position: static;
+        width: 100%;
+        margin-top: var(--spacing-md);
+        padding: var(--spacing-md);
+    }
+    
+    .metric-row {
+        font-size: var(--font-size-xs);
+    }
+    
+    /* Redispatch summary */
+    .redispatch-summary {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-xs);
+    }
+    
+    .summary-card {
+        padding: var(--spacing-sm);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .summary-value {
+        font-size: var(--font-size-base);
+    }
+    
+    .summary-label {
+        font-size: 10px;
+    }
+}
+
+/* ========================================
+   LANDSCAPE MOBILE
+======================================== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+    .dashboard-header {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+    
+    .header-left h1 {
+        font-size: var(--font-size-lg);
+    }
+    
+    .kpis-section {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+}
+
+/* ========================================
+   TOUCH OPTIMIZATIONS
+======================================== */
+
+@media (hover: none) and (pointer: coarse) {
+    /* Larger touch targets */
+    button,
+    .nav-tab,
+    .chart-btn,
+    .action-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Remove hover effects */
+    .kpi-card:hover,
+    .chart-btn:hover,
+    .action-btn:hover {
+        transform: none;
+    }
+    
+    /* Improve scrolling */
+    .chart-controls,
+    .nav-container {
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+    }
+    
+    .chart-btn,
+    .nav-tab {
+        scroll-snap-align: start;
+    }
+}
+
+/* ========================================
+   ACCESSIBILITY FOR MOBILE
+======================================== */
+
+@media (max-width: 768px) {
+    /* Skip link mobile adjustment */
+    .skip-link:focus {
+        top: var(--spacing-sm);
+        left: var(--spacing-sm);
+    }
+    
+    /* Focus indicators */
+    :focus {
+        outline-offset: 2px;
+        outline-width: 3px;
+    }
+}
+
+/* ========================================
+   PERFORMANCE OPTIMIZATIONS
+======================================== */
+
+@media (max-width: 768px) {
+    /* Disable animations on mobile for better performance */
+    * {
+        animation-duration: 0.1s !important;
+        transition-duration: 0.1s !important;
+    }
+    
+    /* Reduce shadows on mobile */
+    .kpi-card,
+    .chart-container {
+        box-shadow: var(--shadow-sm);
+    }
+    
+    /* Simplify gradients */
+    .dashboard-header {
+        background: var(--enspirion-primary);
+    }
+}
+
+/* ========================================
+   PWA OPTIMIZATIONS
+======================================== */
+
+/* Safe area insets for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+    .dashboard-header {
+        padding-top: calc(var(--spacing-md) + env(safe-area-inset-top));
+    }
+    
+    .dashboard-footer {
+        padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
+    }
+    
+    .modal-content {
+        margin-top: calc(var(--spacing-md) + env(safe-area-inset-top));
+        margin-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
+    }
+}
+
+/* Standalone mode (PWA) */
+@media (display-mode: standalone) {
+    .dashboard-header {
+        position: sticky;
+        top: 0;
+    }
+    
+    /* Remove browser-specific UI adjustments */
+    body {
+        overscroll-behavior: contain;
+    }
+}
