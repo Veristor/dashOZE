@@ -710,79 +710,81 @@ createPVDistributionChart() {
 /**
  * Setup toggle between PV and Wind views
  */
+// ZAMIANA: setupPVDistributionViewToggle()
 setupPVDistributionViewToggle() {
-    // akceptuj oba atrybuty: data-view="wind" oraz data-view="wiatr"
-    const pvBtn = document.querySelector('.chart-btn[data-view="pv"], .chart-btn[data-view="PV"]');
-    const windBtn = document.querySelector(
-        '.chart-btn[data-view="wind"], .chart-btn[data-view="Wiatr"], .chart-btn[data-view="wiatr"]'
-    );
+  const controls = document.querySelector('.pv-distribution-chart .chart-controls');
+  if (!controls) {
+    console.warn('[PV/Wind] Brak .pv-distribution-chart .chart-controls');
+    return;
+  }
 
-    if (!pvBtn && !windBtn) {
-        console.warn('[PV/Wind] Nie znaleziono przycisków z data-view. Sprawdź markup.');
-        return;
-    }
+  console.log('[PV/Wind] Delegated click binding on .chart-controls');
 
-    if (pvBtn) {
-        pvBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('[PV/Wind] PV button clicked');
-            this.switchEnergyView('pv');
-        });
-    }
+  controls.addEventListener('click', (e) => {
+    const btn = e.target.closest('.chart-btn[data-view]');
+    if (!btn) return; // klik nie w przycisk z data-view
 
-    if (windBtn) {
-        windBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('[PV/Wind] Wind button clicked');
-            this.switchEnergyView('wind'); // normalizujemy do 'wind'
-        });
-    }
+    // normalizacja aliasów
+    const raw = (btn.dataset.view || '').toLowerCase().trim();
+    const view = (raw === 'wiatr' || raw === 'wind') ? 'wind' : 'pv';
+
+    console.log('[PV/Wind] Button clicked:', raw, '→ normalized:', view);
+    e.preventDefault();
+
+    // aktualizuj klasy aktywne tylko w tym module
+    controls.querySelectorAll('.chart-btn[data-view]').forEach(b => {
+      const val = (b.dataset.view || '').toLowerCase();
+      const isWind = (val === 'wind' || val === 'wiatr');
+      const isPV   = (val === 'pv');
+      if ((view === 'wind' && isWind) || (view === 'pv' && isPV)) {
+        b.classList.add('active');
+      } else if (isWind || isPV) {
+        b.classList.remove('active');
+      }
+    });
+
+    this.switchEnergyView(view);
+  });
 }
+
 
 /**
  * Switch between PV and Wind view
  */
 switchEnergyView(view) {
-    // normalizacja aliasów (np. 'wiatr' -> 'wind')
-    const normalized = String(view).toLowerCase();
-    const targetView = (normalized === 'wiatr' || normalized === 'wind') ? 'wind' : 'pv';
+  const v = String(view).toLowerCase();
+  const targetView = (v === 'wiatr' || v === 'wind') ? 'wind' : 'pv';
 
-    if (this.currentEnergyView === targetView) return;
+  if (this.currentEnergyView === targetView) {
+    console.log('[PV/Wind] Same view, skipping:', targetView);
+    return;
+  }
 
-    this.currentEnergyView = targetView;
-    console.log(`[PV/Wind] Switching to ${targetView} view`);
+  this.currentEnergyView = targetView;
+  console.log('[PV/Wind] Switching to:', targetView);
 
-    // aktualizacja stanu przycisków dla obu wariantów atrybutów
-    document.querySelectorAll('.chart-btn[data-view]').forEach(btn => {
-        const val = btn.getAttribute('data-view')?.toLowerCase();
-        const isWindBtn = (val === 'wind' || val === 'wiatr');
-        const isPVBtn = (val === 'pv');
+  const chart = this.charts.get('pv-distribution');
+  if (!chart) {
+    console.warn('[PV/Wind] Chart not found: pv-distribution');
+    return;
+  }
 
-        if ((targetView === 'wind' && isWindBtn) || (targetView === 'pv' && isPVBtn)) {
-            btn.classList.add('active');
-        } else if (isWindBtn || isPVBtn) {
-            btn.classList.remove('active');
-        }
-    });
+  // przebudowa konfiguracji
+  chart.data.datasets = this.getPVDistributionDatasets();
+  chart.options = this.getPVDistributionOptions();
 
-    // przebudowa wykresu
-    const chart = this.charts.get('pv-distribution');
-    if (chart) {
-        chart.data.datasets = this.getPVDistributionDatasets();
-        chart.options = this.getPVDistributionOptions();
-
-        if (this.lastEnergyData) {
-            this.updatePVDistributionChart(this.lastEnergyData);
-        } else if (this.currentData) {
-            console.log('[PV/Wind] Using currentData fallback on view switch');
-            this.updatePVDistributionChart(this.currentData);
-        } else {
-            console.warn('[PV/Wind] No data available on view switch, clearing chart');
-            chart.data.labels = [];
-            chart.data.datasets.forEach(ds => ds.data = []);
-            chart.update('none');
-        }
-    }
+  // odświeżenie danych
+  if (this.lastEnergyData) {
+    this.updatePVDistributionChart(this.lastEnergyData);
+  } else if (this.currentData) {
+    console.log('[PV/Wind] Using currentData fallback on view switch');
+    this.updatePVDistributionChart(this.currentData);
+  } else {
+    console.warn('[PV/Wind] No data available on view switch, clearing chart');
+    chart.data.labels = [];
+    chart.data.datasets.forEach(ds => ds.data = []);
+    chart.update('none');
+  }
 }
 isPVView() {
     return this.currentEnergyView === 'pv';
