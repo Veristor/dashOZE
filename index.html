@@ -156,14 +156,12 @@
 
                     <div class="kpi-card alert">
                         <div class="kpi-header">
-                           <span class="kpi-icon">⚠️</span>
-        <span class="kpi-title">Ryzyko wezwania</span>
-    </div>
-    <div class="kpi-value" id="current-risk-level">-</div>
-    <div class="kpi-subtitle" id="current-risk-text">Brak danych</div>
-    <div class="kpi-trend" id="peak-risk-info">
-        <span class="trend-label">Szczyt dziś:</span>
-        <span class="trend-value">-- (godz. --)</span>
+                            <span class="kpi-icon">⚠️</span>
+                            <span class="kpi-title">Ryzyko wezwania</span>
+                        </div>
+                        <div class="kpi-value" id="">-</div>
+                        <div class="kpi-subtitle"></div>
+                        <div class="kpi-trend" id="">
                         
                         </div>
                     </div>
@@ -189,9 +187,12 @@
     <div class="chart-header">
         <div class="chart-title">
             <span class="chart-icon">☀️</span>
-            <span>Analiza Generacji PV i Udział w KSE</span>
+            <span>Analiza Generacji PV i Wiatru w KSE</span>
         </div>
         <div class="chart-controls">
+            <button class="chart-btn active" data-view="pv">☀️ PV</button>
+            <button class="chart-btn" data-view="wind">💨 Wiatr</button>
+            <button class="refresh-chart-btn" data-chart="pv-distribution">🔄</button>
            
         </div>
     </div>
@@ -208,13 +209,13 @@
             </div>
             <div class="stat-row" style="border-top: 1px solid #e5e7eb; padding-top: 6px; margin-top: 6px;">
                 <span class="stat-label" style="font-size: 0.75rem;">Moc zainstalowana PV:</span>
-                <span class="stat-value" style="font-size: 0.75rem;">22 636 MW</span>
+                <span class="stat-value" style="font-size: 0.75rem;">22 936 MW</span>
             </div>
         </div>
         <!-- Loading powinien być WEWNĄTRZ chart-content, nie jako osobny div -->
         <div class="chart-loading" id="pv-distribution-loading" style="display: none;">
             <div class="loading-spinner small"></div>
-            <span>Ładowanie danych generacji PV...</span>
+            <span>Ładowanie danych generacji...</span>
         </div>
     </div>
 </div>
@@ -754,4 +755,3 @@
     </script>
 </body>
 </html>
-
