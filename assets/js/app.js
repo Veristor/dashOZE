@@ -161,22 +161,66 @@ async initializeCharts() {
     }
 
     /**
-     * Setup additional features
-     */
-    setupAdditionalFeatures() {
-        // Chart hover effects for PV distribution
-        const chartEl = document.getElementById('pv-distribution-chart');
-        const statsBox = document.getElementById('pv-stats-box');
+ * Setup additional features
+ */
+setupAdditionalFeatures() {
+    // Chart hover effects for PV distribution
+    const chartEl = document.getElementById('pv-distribution-chart');
+    const statsBox = document.getElementById('pv-stats-box');
 
-        if (chartEl && statsBox) {
-            chartEl.addEventListener('mouseenter', () => {
-                statsBox.style.opacity = '0';
-            });
-            chartEl.addEventListener('mouseleave', () => {
-                statsBox.style.opacity = '1';
+    if (chartEl && statsBox) {
+        chartEl.addEventListener('mouseenter', () => {
+            statsBox.style.opacity = '0';
+        });
+        chartEl.addEventListener('mouseleave', () => {
+            statsBox.style.opacity = '1';
+        });
+    }
+    
+    // DODAJ TEN KOD - Fix dla przycisków PV/Wind
+    setTimeout(() => {
+        // Upewnij się że przyciski PV/Wind działają
+        const pvBtn = document.querySelector('.chart-btn[data-view="pv"]');
+        const windBtn = document.querySelector('.chart-btn[data-view="wind"]');
+        
+        if (pvBtn) {
+            pvBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('PV button clicked - app.js');
+                if (window.ChartManager && window.ChartManager.switchEnergyView) {
+                    window.ChartManager.switchEnergyView('pv');
+                }
             });
         }
-    }
+        
+        if (windBtn) {
+            windBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Wind button clicked - app.js');
+                if (window.ChartManager && window.ChartManager.switchEnergyView) {
+                    window.ChartManager.switchEnergyView('wind');
+                }
+            });
+        }
+        
+        // Także dla przycisku refresh
+        const refreshBtn = document.querySelector('.refresh-chart-btn[data-chart="pv-distribution"]');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Refresh PV/Wind chart');
+                if (window.ChartManager && window.ChartManager.currentData) {
+                    window.ChartManager.updatePVDistributionChart(window.ChartManager.currentData);
+                }
+            });
+        }
+        
+        console.log('PV/Wind buttons initialized');
+    }, 1000); // Opóźnienie dla pewności że DOM jest gotowy
+}
+    
 
     // ========================================
     // DATA LOADING
