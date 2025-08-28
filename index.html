@@ -738,6 +738,7 @@
     <!-- Dodaj po risk-calculator.js -->
     <script src="assets/js/redispatch-risk-scorer.js"></script>
     <script src="assets/js/app.js"></script>
+    
 
     <!-- Service Worker Registration -->
     <script>
@@ -753,5 +754,53 @@
             });
         }
     </script>
+
+<script>
+// Fix dla GitHub Pages
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var pvBtn = document.querySelector('.chart-btn[data-view="pv"]');
+        var windBtn = document.querySelector('.chart-btn[data-view="wind"]');
+        
+        if (pvBtn && windBtn) {
+            pvBtn.onclick = function(e) {
+                e.preventDefault();
+                changeToView('pv');
+            };
+            
+            windBtn.onclick = function(e) {
+                e.preventDefault();
+                changeToView('wind');
+            };
+        }
+        
+        function changeToView(view) {
+            if (!window.ChartManager) return;
+            
+            window.ChartManager.currentEnergyView = view;
+            
+            // Aktualizuj przyciski
+            document.querySelectorAll('.chart-btn[data-view]').forEach(function(btn) {
+                if (btn.dataset.view === view) {
+                    btn.classList.add('active');
+                } else if (btn.dataset.view === 'pv' || btn.dataset.view === 'wind') {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Wywołaj metody bezpośrednio
+            var chart = window.ChartManager.charts.get('pv-distribution');
+            if (chart && window.ChartManager.getPVDistributionDatasets) {
+                chart.data.datasets = window.ChartManager.getPVDistributionDatasets();
+                chart.options = window.ChartManager.getPVDistributionOptions();
+                
+                if (window.ChartManager.lastEnergyData) {
+                    window.ChartManager.updatePVDistributionChart(window.ChartManager.lastEnergyData);
+                }
+            }
+        }
+    }, 2000); // Czeka 2 sekundy na załadowanie
+});
+</script>
 </body>
 </html>
