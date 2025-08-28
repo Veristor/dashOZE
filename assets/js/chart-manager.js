@@ -711,215 +711,199 @@ createPVDistributionChart() {
  * Setup toggle between PV and Wind views
  */
 setupPVDistributionViewToggle() {
-    const pvBtn = document.querySelector('.chart-btn[data-view="pv"]');
-    const windBtn = document.querySelector('.chart-btn[data-view="wind"]');
-    
+    // akceptuj oba atrybuty: data-view="wind" oraz data-view="wiatr"
+    const pvBtn = document.querySelector('.chart-btn[data-view="pv"], .chart-btn[data-view="PV"]');
+    const windBtn = document.querySelector(
+        '.chart-btn[data-view="wind"], .chart-btn[data-view="Wiatr"], .chart-btn[data-view="wiatr"]'
+    );
+
+    if (!pvBtn && !windBtn) {
+        console.warn('[PV/Wind] Nie znaleziono przycisków z data-view. Sprawdź markup.');
+        return;
+    }
+
     if (pvBtn) {
         pvBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            console.log('PV button clicked');
+            console.log('[PV/Wind] PV button clicked');
             this.switchEnergyView('pv');
         });
     }
-    
+
     if (windBtn) {
         windBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            console.log('Wind button clicked');
-            this.switchEnergyView('wind');
+            console.log('[PV/Wind] Wind button clicked');
+            this.switchEnergyView('wind'); // normalizujemy do 'wind'
         });
     }
 }
-
 
 /**
  * Switch between PV and Wind view
  */
 switchEnergyView(view) {
-    if (this.currentEnergyView === view) return;
-    
-    this.currentEnergyView = view;
-    console.log(`Switching to ${view} view`);
-    
-    // Aktualizuj przyciski
+    // normalizacja aliasów (np. 'wiatr' -> 'wind')
+    const normalized = String(view).toLowerCase();
+    const targetView = (normalized === 'wiatr' || normalized === 'wind') ? 'wind' : 'pv';
+
+    if (this.currentEnergyView === targetView) return;
+
+    this.currentEnergyView = targetView;
+    console.log(`[PV/Wind] Switching to ${targetView} view`);
+
+    // aktualizacja stanu przycisków dla obu wariantów atrybutów
     document.querySelectorAll('.chart-btn[data-view]').forEach(btn => {
-        if (btn.dataset.view === view) {
+        const val = btn.getAttribute('data-view')?.toLowerCase();
+        const isWindBtn = (val === 'wind' || val === 'wiatr');
+        const isPVBtn = (val === 'pv');
+
+        if ((targetView === 'wind' && isWindBtn) || (targetView === 'pv' && isPVBtn)) {
             btn.classList.add('active');
-        } else if (btn.dataset.view === 'pv' || btn.dataset.view === 'wind') {
+        } else if (isWindBtn || isPVBtn) {
             btn.classList.remove('active');
         }
     });
-    
-    // Przebuduj wykres
+
+    // przebudowa wykresu
     const chart = this.charts.get('pv-distribution');
     if (chart) {
-        // Zmień datasety
         chart.data.datasets = this.getPVDistributionDatasets();
-        
-        // Zmień opcje
-        const newOptions = this.getPVDistributionOptions();
-        chart.options = newOptions;
-        
-        // Odśwież dane - WAŻNE: sprawdź czy mamy dane
+        chart.options = this.getPVDistributionOptions();
+
         if (this.lastEnergyData) {
             this.updatePVDistributionChart(this.lastEnergyData);
         } else if (this.currentData) {
-            // Użyj currentData jako fallback
-            console.log('Using currentData as fallback for energy view switch');
+            console.log('[PV/Wind] Using currentData fallback on view switch');
             this.updatePVDistributionChart(this.currentData);
         } else {
-            console.warn('No data available for energy view switch');
-            // Ustaw puste dane
+            console.warn('[PV/Wind] No data available on view switch, clearing chart');
             chart.data.labels = [];
-            chart.data.datasets[0].data = [];
-            chart.data.datasets[1].data = [];
+            chart.data.datasets.forEach(ds => ds.data = []);
             chart.update('none');
         }
     }
 }
-
+isPVView() {
+    return this.currentEnergyView === 'pv';
+}
     /**
      * Get PV Distribution datasets configuration
      */
     getPVDistributionDatasets() {
-        if (this.currentEnergyView === 'wind') {
-            return [
-                {
-                    label: 'Generacja Wiatr [MW]',
-                    data: [],
-                    backgroundColor: 'rgba(96, 165, 250, 0.7)', // niebieski dla wiatru
-                    borderColor: 'rgba(96, 165, 250, 1)',
-                    borderWidth: 1,
-                    yAxisID: 'y',
-                    order: 2,
-                    type: 'bar'
-                },
-                {
-                    label: '% wykorzystania mocy zainstalowanej Wiatr',
-                    data: [],
-                    type: 'line',
-                    borderColor: 'rgba(34, 197, 94, 1)', // zielony
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    yAxisID: 'y1',
-                    order: 1
-                }
-            ];
-        } else {
-            // Domyślnie PV
-            return [
-                {
-                    label: 'Generacja PV [MW]',
-                    data: [],
-                    backgroundColor: 'rgba(255, 152, 0, 0.7)',
-                    borderColor: 'rgba(255, 152, 0, 1)',
-                    borderWidth: 1,
-                    yAxisID: 'y',
-                    order: 2,
-                    type: 'bar'
-                },
-                {
-                    label: '% wykorzystania mocy zainstalowanej PV',
-                    data: [],
-                    type: 'line',
-                    borderColor: 'rgba(33, 150, 243, 1)',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    yAxisID: 'y1',
-                    order: 1
-                }
-            ];
-        }
+    const isPV = this.isPVView();
+    if (!isPV) {
+        return [
+            {
+                label: 'Generacja Wiatr [MW]',
+                data: [],
+                backgroundColor: 'rgba(96, 165, 250, 0.7)',
+                borderColor: 'rgba(96, 165, 250, 1)',
+                borderWidth: 1,
+                yAxisID: 'y',
+                order: 2,
+                type: 'bar'
+            },
+            {
+                label: '% wykorzystania mocy zainstalowanej Wiatr',
+                data: [],
+                type: 'line',
+                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                yAxisID: 'y1',
+                order: 1
+            }
+        ];
     }
+    return [
+        {
+            label: 'Generacja PV [MW]',
+            data: [],
+            backgroundColor: 'rgba(255, 152, 0, 0.7)',
+            borderColor: 'rgba(255, 152, 0, 1)',
+            borderWidth: 1,
+            yAxisID: 'y',
+            order: 2,
+            type: 'bar'
+        },
+        {
+            label: '% wykorzystania mocy zainstalowanej PV',
+            data: [],
+            type: 'line',
+            borderColor: 'rgba(33, 150, 243, 1)',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            yAxisID: 'y1',
+            order: 1
+        }
+    ];
+}
 
     /**
      * Get PV Distribution chart options
      */
     getPVDistributionOptions() {
-        const isPV = this.currentEnergyView === 'pv';
-        const energyType = isPV ? 'PV' : 'Wiatr';
-        const primaryColor = isPV ? 'rgba(255, 152, 0, 1)' : 'rgba(96, 165, 250, 1)';
-        
-        return {
-            ...this.defaultOptions,
-            plugins: {
-                ...this.defaultOptions.plugins,
-                title: { display: false },
-                tooltip: {
-                    ...this.defaultOptions.plugins.tooltip,
-                    callbacks: {
-                        label: (context) => {
-                            let label = context.dataset.label + ': ';
-                            if (context.datasetIndex === 1) {
-                                label += context.parsed.y.toFixed(2) + '%';
-                            } else {
-                                label += context.parsed.y.toFixed(1) + ' MW';
-                            }
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: {
-                        font: { size: 10 },
-                        maxRotation: 45,
-                        minRotation: 45,
-                        autoSkip: true,
-                        maxTicksLimit: 24
-                    }
-                },
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true,
-                    grid: {
-                        display: true,
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    },
-                    ticks: {
-                        font: { size: 11 },
-                        color: primaryColor,
-                        callback: (value) => value.toFixed(0) + ' MW'
-                    },
-                    title: {
-                        display: true,
-                        text: `Generacja ${energyType} [MW]`,
-                        color: primaryColor,
-                        font: { size: 12 }
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    beginAtZero: true,
-                    suggestedMax: isPV ? 60 : 80, // Wiatr może mieć wyższe wykorzystanie
-                    grid: { drawOnChartArea: false },
-                    ticks: {
-                        font: { size: 11 },
-                        color: isPV ? 'rgba(33, 150, 243, 1)' : 'rgba(34, 197, 94, 1)',
-                        callback: (value) => value + '%'
-                    },
-                    title: {
-                        display: true,
-                        text: '% wykorzystania mocy zainstalowanej',
-                        color: isPV ? 'rgba(33, 150, 243, 1)' : 'rgba(34, 197, 94, 1)',
-                        font: { size: 12 }
+    const isPV = this.isPVView();
+    const energyType = isPV ? 'PV' : 'Wiatr';
+    const primaryColor = isPV ? 'rgba(255, 152, 0, 1)' : 'rgba(96, 165, 250, 1)';
+    const percentColor = isPV ? 'rgba(33, 150, 243, 1)' : 'rgba(34, 197, 94, 1)';
+
+    return {
+        ...this.defaultOptions,
+        plugins: {
+            ...this.defaultOptions.plugins,
+            title: { display: false },
+            tooltip: {
+                ...this.defaultOptions.plugins.tooltip,
+                callbacks: {
+                    label: (context) => {
+                        const label = context.dataset.label + ': ';
+                        const v = context.parsed.y;
+                        return (context.datasetIndex === 1)
+                            ? label + (Number.isFinite(v) ? v.toFixed(2) : '0.00') + '%'
+                            : label + (Number.isFinite(v) ? v.toFixed(1) : '0.0') + ' MW';
                     }
                 }
             }
-        };
-    }
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 24 }
+            },
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                beginAtZero: true,
+                grid: { display: true, color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: {
+                    font: { size: 11 },
+                    color: primaryColor,
+                    callback: (value) => `${Number(value).toFixed(0)} MW`
+                },
+                title: { display: true, text: `Generacja ${energyType} [MW]`, color: primaryColor, font: { size: 12 } }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                beginAtZero: true,
+                suggestedMax: isPV ? 60 : 80,
+                grid: { drawOnChartArea: false },
+                ticks: { font: { size: 11 }, color: percentColor, callback: (v) => `${v}%` },
+                title: { display: true, text: '% wykorzystania mocy zainstalowanej', color: percentColor, font: { size: 12 } }
+            }
+        }
+    };
+}
 
     
     /**
