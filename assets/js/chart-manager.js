@@ -701,11 +701,10 @@ createPVDistributionChart() {
     const chart = new Chart(canvas.getContext('2d'), config);
     this.charts.set('pv-distribution', chart);
     
-    // NIE wywołuj setupPVDistributionViewToggle() jeśli nie jest potrzebna
-    // Lub wywołaj tylko jeśli metoda istnieje:
-    if (typeof this.setupPVDistributionViewToggle === 'function') {
-        this.setupPVDistributionViewToggle();
-    }
+    // WAŻNE: wywołaj setup dla przycisków
+    this.setupPVDistributionViewToggle();
+    
+    console.log('PV Distribution chart created with view toggle');
 }
 
 /**
@@ -716,25 +715,31 @@ setupPVDistributionViewToggle() {
     const windBtn = document.querySelector('.chart-btn[data-view="wind"]');
     
     if (pvBtn) {
-        pvBtn.addEventListener('click', () => {
+        pvBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('PV button clicked');
             this.switchEnergyView('pv');
         });
     }
     
     if (windBtn) {
-        windBtn.addEventListener('click', () => {
+        windBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Wind button clicked');
             this.switchEnergyView('wind');
         });
     }
 }
 
+
 /**
  * Switch between PV and Wind view
  */
 switchEnergyView(view) {
-    if (this.currentEnergyView === view) return; // Już jesteśmy w tym widoku
+    if (this.currentEnergyView === view) return;
     
     this.currentEnergyView = view;
+    console.log(`Switching to ${view} view`);
     
     // Aktualizuj przyciski
     document.querySelectorAll('.chart-btn[data-view]').forEach(btn => {
@@ -745,19 +750,30 @@ switchEnergyView(view) {
         }
     });
     
-    // Przebuduj wykres z nowymi ustawieniami
+    // Przebuduj wykres
     const chart = this.charts.get('pv-distribution');
     if (chart) {
         // Zmień datasety
         chart.data.datasets = this.getPVDistributionDatasets();
         
-        // Zmień opcje (kolory osi, tytuły)
+        // Zmień opcje
         const newOptions = this.getPVDistributionOptions();
         chart.options = newOptions;
         
-        // Odśwież dane
+        // Odśwież dane - WAŻNE: sprawdź czy mamy dane
         if (this.lastEnergyData) {
             this.updatePVDistributionChart(this.lastEnergyData);
+        } else if (this.currentData) {
+            // Użyj currentData jako fallback
+            console.log('Using currentData as fallback for energy view switch');
+            this.updatePVDistributionChart(this.currentData);
+        } else {
+            console.warn('No data available for energy view switch');
+            // Ustaw puste dane
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+            chart.data.datasets[1].data = [];
+            chart.update('none');
         }
     }
 }
@@ -947,14 +963,14 @@ updatePVDistributionChart(data) {
     const isPV = this.currentEnergyView === 'pv';
     
     // Debug - sprawdź strukturę danych
-    if (!isPV) {
-        console.log('Wind mode - checking data structure:');
-        console.log('fullGenerationData exists:', !!data.fullGenerationData);
-        console.log('fullGenerationData length:', data.fullGenerationData?.length);
-        if (data.fullGenerationData && data.fullGenerationData.length > 0) {
-            console.log('First item of fullGenerationData:', data.fullGenerationData[0]);
-            console.log('Available keys:', Object.keys(data.fullGenerationData[0]));
-        }
+     if (!isPV) {
+        console.log('Wind mode - data structure:', {
+            hasFullGenerationData: !!data.fullGenerationData,
+            fullGenerationDataLength: data.fullGenerationData?.length,
+            firstItem: data.fullGenerationData?.[0],
+            hasWindGeneration: !!data.windGeneration,
+            windGenerationLength: data.windGeneration?.length
+        });
     }
     
     const labels = [];
