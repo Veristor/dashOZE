@@ -190,8 +190,8 @@
             <span>Analiza Generacji PV i Wiatru w KSE</span>
         </div>
         <div class="chart-controls">
-            <button class="chart-btn active" data-view="pv">☀️ PV</button>
-            <button class="chart-btn" data-view="wind">💨 Wiatr</button>
+            <button class="chart-btn active" data-view="pv" onclick="switchChartView('pv')">☀️ PV</button>
+            <button class="chart-btn" data-view="wind" onclick="switchChartView('wind')">💨 Wiatr</button>
             <button class="refresh-chart-btn" data-chart="pv-distribution">🔄</button>
            
         </div>
@@ -755,52 +755,51 @@
         }
     </script>
 
-<script>
-// Fix dla GitHub Pages
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        var pvBtn = document.querySelector('.chart-btn[data-view="pv"]');
-        var windBtn = document.querySelector('.chart-btn[data-view="wind"]');
-        
-        if (pvBtn && windBtn) {
-            pvBtn.onclick = function(e) {
-                e.preventDefault();
-                changeToView('pv');
-            };
-            
-            windBtn.onclick = function(e) {
-                e.preventDefault();
-                changeToView('wind');
-            };
+    <script>
+// Globalna funkcja do przełączania widoków
+window.switchChartView = function(view) {
+    if (!window.ChartManager) {
+        console.error('ChartManager not found');
+        return;
+    }
+    
+    console.log('Switching to view:', view);
+    
+    // Ustaw aktualny widok
+    window.ChartManager.currentEnergyView = view;
+    
+    // Aktualizuj przyciski
+    document.querySelectorAll('.chart-btn[data-view]').forEach(function(btn) {
+        if (btn.dataset.view === view) {
+            btn.classList.add('active');
+        } else if (btn.dataset.view === 'pv' || btn.dataset.view === 'wind') {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Pobierz wykres
+    var chart = window.ChartManager.charts.get('pv-distribution');
+    
+    if (chart) {
+        // Aktualizuj datasety i opcje
+        if (window.ChartManager.getPVDistributionDatasets) {
+            chart.data.datasets = window.ChartManager.getPVDistributionDatasets();
         }
         
-        function changeToView(view) {
-            if (!window.ChartManager) return;
-            
-            window.ChartManager.currentEnergyView = view;
-            
-            // Aktualizuj przyciski
-            document.querySelectorAll('.chart-btn[data-view]').forEach(function(btn) {
-                if (btn.dataset.view === view) {
-                    btn.classList.add('active');
-                } else if (btn.dataset.view === 'pv' || btn.dataset.view === 'wind') {
-                    btn.classList.remove('active');
-                }
-            });
-            
-            // Wywołaj metody bezpośrednio
-            var chart = window.ChartManager.charts.get('pv-distribution');
-            if (chart && window.ChartManager.getPVDistributionDatasets) {
-                chart.data.datasets = window.ChartManager.getPVDistributionDatasets();
-                chart.options = window.ChartManager.getPVDistributionOptions();
-                
-                if (window.ChartManager.lastEnergyData) {
-                    window.ChartManager.updatePVDistributionChart(window.ChartManager.lastEnergyData);
-                }
-            }
+        if (window.ChartManager.getPVDistributionOptions) {
+            chart.options = window.ChartManager.getPVDistributionOptions();
         }
-    }, 2000); // Czeka 2 sekundy na załadowanie
-});
+        
+        // Odśwież dane
+        if (window.ChartManager.lastEnergyData && window.ChartManager.updatePVDistributionChart) {
+            window.ChartManager.updatePVDistributionChart(window.ChartManager.lastEnergyData);
+        } else {
+            // Jeśli nie ma danych, przynajmniej odśwież wykres
+            chart.update();
+        }
+    }
+}
 </script>
+
 </body>
 </html>
