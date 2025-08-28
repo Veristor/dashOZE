@@ -15,8 +15,13 @@ class ChartManager {
         this.CACHE_DURATION = 5 * 60 * 1000; // 5 minut cache
         this.lastChartUpdate = null;
         this.CHART_UPDATE_THROTTLE = 10 * 1000; // 10 sekund między odświeżeniami wykresu
-        this.PV_INSTALLED_CAPACITY_MW = 22636.3;
+        this.PV_INSTALLED_CAPACITY_MW = 22970.8;
+        this.WIND_INSTALLED_CAPACITY_MW = 10350.1;
         
+
+        this.currentEnergyView = 'pv';
+        this.lastEnergyData = null;
+
         // Domyślne opcje dla wszystkich wykresów
         this.defaultOptions = {
             responsive: true,
@@ -319,7 +324,7 @@ setupKSEDemandControls() {
     getGenerationForecastDatasets() {
     return [
         {
-            label: 'JW RB',
+            label: 'JW RB (zak.)',
             data: [],
             backgroundColor: 'rgba(173, 216, 230, 0.6)',
             borderColor: 'rgba(173, 216, 230, 1)',
@@ -328,7 +333,7 @@ setupKSEDemandControls() {
             stack: 'generation' // Dodaj stack
         },
         {
-            label: 'Spoza RB',
+            label: 'Spoza RB (JGa+JGO)',
             data: [],
             backgroundColor: 'rgba(192, 192, 192, 0.6)',
             borderColor: 'rgba(192, 192, 192, 1)',
@@ -704,50 +709,128 @@ createPVDistributionChart() {
 }
 
 /**
- * Pusta metoda dla kompatybilności wstecznej
+ * Setup toggle between PV and Wind views
  */
 setupPVDistributionViewToggle() {
-    // Metoda pozostawiona pusta - brak przełączania widoków
-    return;
+    const pvBtn = document.querySelector('.chart-btn[data-view="pv"]');
+    const windBtn = document.querySelector('.chart-btn[data-view="wind"]');
+    
+    if (pvBtn) {
+        pvBtn.addEventListener('click', () => {
+            this.switchEnergyView('pv');
+        });
+    }
+    
+    if (windBtn) {
+        windBtn.addEventListener('click', () => {
+            this.switchEnergyView('wind');
+        });
+    }
+}
+
+/**
+ * Switch between PV and Wind view
+ */
+switchEnergyView(view) {
+    if (this.currentEnergyView === view) return; // Już jesteśmy w tym widoku
+    
+    this.currentEnergyView = view;
+    
+    // Aktualizuj przyciski
+    document.querySelectorAll('.chart-btn[data-view]').forEach(btn => {
+        if (btn.dataset.view === view) {
+            btn.classList.add('active');
+        } else if (btn.dataset.view === 'pv' || btn.dataset.view === 'wind') {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Przebuduj wykres z nowymi ustawieniami
+    const chart = this.charts.get('pv-distribution');
+    if (chart) {
+        // Zmień datasety
+        chart.data.datasets = this.getPVDistributionDatasets();
+        
+        // Zmień opcje (kolory osi, tytuły)
+        const newOptions = this.getPVDistributionOptions();
+        chart.options = newOptions;
+        
+        // Odśwież dane
+        if (this.lastEnergyData) {
+            this.updatePVDistributionChart(this.lastEnergyData);
+        }
+    }
 }
 
     /**
      * Get PV Distribution datasets configuration
      */
     getPVDistributionDatasets() {
-        return [
-            {
-                label: 'Generacja PV [MW]',
-                data: [],
-                backgroundColor: 'rgba(255, 152, 0, 0.7)',
-                borderColor: 'rgba(255, 152, 0, 1)',
-                borderWidth: 1,
-                yAxisID: 'y',
-                order: 2,
-                type: 'bar'
-            },
-            {
-                label: '% wykorzystania mocy zainstalowanej PV',
-                data: [],
-                type: 'line',
-                borderColor: 'rgba(33, 150, 243, 1)',
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                borderDash: [5, 5],
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                yAxisID: 'y1',
-                order: 1
-            }
-            
-        ];
+        if (this.currentEnergyView === 'wind') {
+            return [
+                {
+                    label: 'Generacja Wiatr [MW]',
+                    data: [],
+                    backgroundColor: 'rgba(96, 165, 250, 0.7)', // niebieski dla wiatru
+                    borderColor: 'rgba(96, 165, 250, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    order: 2,
+                    type: 'bar'
+                },
+                {
+                    label: '% wykorzystania mocy zainstalowanej Wiatr',
+                    data: [],
+                    type: 'line',
+                    borderColor: 'rgba(34, 197, 94, 1)', // zielony
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    yAxisID: 'y1',
+                    order: 1
+                }
+            ];
+        } else {
+            // Domyślnie PV
+            return [
+                {
+                    label: 'Generacja PV [MW]',
+                    data: [],
+                    backgroundColor: 'rgba(255, 152, 0, 0.7)',
+                    borderColor: 'rgba(255, 152, 0, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    order: 2,
+                    type: 'bar'
+                },
+                {
+                    label: '% wykorzystania mocy zainstalowanej PV',
+                    data: [],
+                    type: 'line',
+                    borderColor: 'rgba(33, 150, 243, 1)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    yAxisID: 'y1',
+                    order: 1
+                }
+            ];
+        }
     }
 
     /**
      * Get PV Distribution chart options
      */
     getPVDistributionOptions() {
-      return {
+        const isPV = this.currentEnergyView === 'pv';
+        const energyType = isPV ? 'PV' : 'Wiatr';
+        const primaryColor = isPV ? 'rgba(255, 152, 0, 1)' : 'rgba(96, 165, 250, 1)';
+        
+        return {
             ...this.defaultOptions,
             plugins: {
                 ...this.defaultOptions.plugins,
@@ -757,9 +840,9 @@ setupPVDistributionViewToggle() {
                     callbacks: {
                         label: (context) => {
                             let label = context.dataset.label + ': ';
-                            if (context.datasetIndex === 1) { // % wykorzystania
+                            if (context.datasetIndex === 1) {
                                 label += context.parsed.y.toFixed(2) + '%';
-                            } else { // MW
+                            } else {
                                 label += context.parsed.y.toFixed(1) + ' MW';
                             }
                             return label;
@@ -789,13 +872,13 @@ setupPVDistributionViewToggle() {
                     },
                     ticks: {
                         font: { size: 11 },
-                        color: 'rgba(255, 152, 0, 1)',
+                        color: primaryColor,
                         callback: (value) => value.toFixed(0) + ' MW'
                     },
                     title: {
                         display: true,
-                        text: 'Generacja PV [MW]',
-                        color: 'rgba(255, 152, 0, 1)',
+                        text: `Generacja ${energyType} [MW]`,
+                        color: primaryColor,
                         font: { size: 12 }
                     }
                 },
@@ -804,17 +887,17 @@ setupPVDistributionViewToggle() {
                     display: true,
                     position: 'right',
                     beginAtZero: true,
-                    suggestedMax: 100,
+                    suggestedMax: isPV ? 60 : 80, // Wiatr może mieć wyższe wykorzystanie
                     grid: { drawOnChartArea: false },
                     ticks: {
                         font: { size: 11 },
-                        color: 'rgba(33, 150, 243, 1)',
+                        color: isPV ? 'rgba(33, 150, 243, 1)' : 'rgba(34, 197, 94, 1)',
                         callback: (value) => value + '%'
                     },
                     title: {
                         display: true,
-                        text: '% użycia PV w KSE',
-                        color: 'rgba(33, 150, 243, 1)',
+                        text: '% wykorzystania mocy zainstalowanej',
+                        color: isPV ? 'rgba(33, 150, 243, 1)' : 'rgba(34, 197, 94, 1)',
                         font: { size: 12 }
                     }
                 }
@@ -844,24 +927,47 @@ setupPVDistributionViewToggle() {
         
         chart.update('none');
     }
-// Fragment 4: Pusta metoda setupPVDistributionViewToggle() - zachowana dla kompatybilności
-    setupPVDistributionViewToggle() {
-        // Metoda pozostawiona pusta - nie ma już przełączania widoków
-        // Zachowana tylko dla kompatybilności z istniejącym kodem
-        return;
-    }
-    /**
-     * Update PV Distribution Chart
-     */
-  updatePVDistributionChart(data) {
-        const chart = this.charts.get('pv-distribution');
-        if (!chart) return;
 
-        // Generate time labels
-        const labels = [];
-        const pvPercentageOfInstalled = []; // Nowa tablica dla % mocy zainstalowanej
+
+/**
+ * Update PV Distribution Chart (obsługuje też Wind)
+ */
+updatePVDistributionChart(data) {
+    const chart = this.charts.get('pv-distribution');
+    if (!chart) return;
+    
+    // Zachowaj dane dla przyszłych przełączeń widoku
+    this.lastEnergyData = data;
+// Jeśli brakuje fullGenerationData, użyj z currentData
+    if (!data.fullGenerationData && this.currentData && this.currentData.fullGenerationData) {
+        data.fullGenerationData = this.currentData.fullGenerationData;
+        console.log('Using fullGenerationData from currentData');
+    }
+    
+    const isPV = this.currentEnergyView === 'pv';
+    
+    // Debug - sprawdź strukturę danych
+    if (!isPV) {
+        console.log('Wind mode - checking data structure:');
+        console.log('fullGenerationData exists:', !!data.fullGenerationData);
+        console.log('fullGenerationData length:', data.fullGenerationData?.length);
+        if (data.fullGenerationData && data.fullGenerationData.length > 0) {
+            console.log('First item of fullGenerationData:', data.fullGenerationData[0]);
+            console.log('Available keys:', Object.keys(data.fullGenerationData[0]));
+        }
+    }
+    
+    const labels = [];
+    const energyData = [];
+    const percentageOfInstalled = [];
+    
+    const installedCapacity = isPV ? this.PV_INSTALLED_CAPACITY_MW : this.WIND_INSTALLED_CAPACITY_MW;
+    
+    if (isPV) {
+        // PV - dane godzinowe
+        const dataSource = data.pvGeneration || [];
         
-        for (let i = 0; i < data.pvGeneration.length; i++) {
+        for (let i = 0; i < dataSource.length; i++) {
             if (data.timestamps && data.timestamps[i]) {
                 const time = new Date(data.timestamps[i]);
                 labels.push(time.toLocaleTimeString('pl-PL', { 
@@ -869,67 +975,173 @@ setupPVDistributionViewToggle() {
                     minute: '2-digit' 
                 }));
             } else {
-                // Fallback for 15-minute intervals
                 const hour = Math.floor(i / 4);
                 const minute = (i % 4) * 15;
                 labels.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
             }
             
-            // Oblicz % wykorzystania mocy zainstalowanej
-            const pvGeneration = data.pvGeneration[i] || 0;
-            const percentageOfInstalled = (pvGeneration / this.PV_INSTALLED_CAPACITY_MW) * 100;
-            pvPercentageOfInstalled.push(percentageOfInstalled);
+            const generation = parseFloat(dataSource[i]) || 0;
+            energyData.push(generation);
+            
+            const percentageOfInst = (generation / installedCapacity) * 100;
+            percentageOfInstalled.push(percentageOfInst);
+        }
+    } else {
+        // WIND - spróbuj różnych źródeł danych
+        let windDataFound = false;
+        
+        // Opcja 1: dane w windGeneration (jeśli istnieją)
+        if (data.windGeneration && data.windGeneration.length > 0) {
+            console.log('Using windGeneration array');
+            for (let i = 0; i < data.windGeneration.length; i++) {
+                // Etykiety - tak jak dla PV
+                if (data.timestamps && data.timestamps[i]) {
+                    const time = new Date(data.timestamps[i]);
+                    labels.push(time.toLocaleTimeString('pl-PL', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    }));
+                } else {
+                    const hour = Math.floor(i / 4);
+                    const minute = (i % 4) * 15;
+                    labels.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+                }
+                
+                const windGen = parseFloat(data.windGeneration[i]) || 0;
+                energyData.push(windGen);
+                const percentageOfInst = (windGen / installedCapacity) * 100;
+                percentageOfInstalled.push(percentageOfInst);
+            }
+            windDataFound = true;
+        }
+        // Opcja 2: dane w fullGenerationData
+        else if (data.fullGenerationData && data.fullGenerationData.length > 0) {
+            console.log('Trying fullGenerationData for wind');
+            
+            // Sprawdź pierwsze elementy
+            const sample = data.fullGenerationData.slice(0, 5);
+            console.log('Sample data:', sample);
+            
+            for (let i = 0; i < data.fullGenerationData.length; i++) {
+                const item = data.fullGenerationData[i];
+                
+                // Etykieta czasu
+                if (item.time) {
+                    const time = new Date(item.time);
+                    labels.push(time.toLocaleTimeString('pl-PL', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    }));
+                } else {
+                    const hour = Math.floor(i / 4);
+                    const minute = (i % 4) * 15;
+                    labels.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+                }
+                
+                // Szukaj danych wiatrowych pod różnymi nazwami
+                const windGeneration = item.gen_wi || item.wind || item.generation_wind || 0;
+                energyData.push(windGeneration);
+                
+                const percentageOfInst = (windGeneration / installedCapacity) * 100;
+                percentageOfInstalled.push(percentageOfInst);
+            }
+            windDataFound = energyData.some(v => v > 0);
         }
         
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = data.pvGeneration || [];
-        chart.data.datasets[1].data = pvPercentageOfInstalled; // Użyj nowego % zamiast % KSE
-        // Usunięty dataset[2] dla portfolio
-        
-        chart.update('none');
-        
-        // Update statistics
-        this.updatePVStatistics(data, pvPercentageOfInstalled);
-    }
-
-    /**
-     * Update PV statistics panel
-     */
-    updatePVStatistics(data, pvPercentageOfInstalled) {
-        const now = new Date();
-        
-            // Find current or latest data point
-            let currentIndex = data.timestamps?.length - 1 || 0;
-            if (data.timestamps) {
-                const tempIndex = data.timestamps.findIndex(ts => 
-                    Math.abs(new Date(ts).getTime() - now.getTime()) < 10 * 60 * 1000
-                );
-                if (tempIndex !== -1) currentIndex = tempIndex;
+        if (!windDataFound) {
+            console.error('No wind data found in any expected location');
+            // Użyj pustych danych
+            for (let i = 0; i < 96; i++) {
+                const hour = Math.floor(i / 4);
+                const minute = (i % 4) * 15;
+                labels.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+                energyData.push(0);
+                percentageOfInstalled.push(0);
             }
-
-            const currentPvGen = data.pvGeneration[currentIndex] || 0;
-            const currentPercentage = pvPercentageOfInstalled[currentIndex] || 0;
-            const avgPercentage = this.calculateAverage(pvPercentageOfInstalled);
-
-            // Update UI elements - BEZ portfolio
-            const updates = {
-                'current-pv-gen': `${currentPvGen.toFixed(0)} MW`,
-                'current-pv-share': `${currentPercentage.toFixed(2)}%`,
-                'avg-pv-share': `${avgPercentage.toFixed(2)}%`
-            };
-
-            Object.entries(updates).forEach(([id, value]) => {
-                const element = document.getElementById(id);
-                if (element) element.textContent = value;
-            });
-            
-                // Ukryj lub usuń element portfolio
-                const portfolioElement = document.getElementById('portfolio-gen-calc');
-                if (portfolioElement && portfolioElement.parentElement) {
-                    portfolioElement.parentElement.style.display = 'none';
-             }
+        }
     }
     
+    console.log(`Final data for ${isPV ? 'PV' : 'Wind'}:`, {
+        labelsCount: labels.length,
+        energyDataSample: energyData.slice(0, 10),
+        maxValue: Math.max(...energyData),
+        hasNonZeroValues: energyData.some(v => v > 0)
+    });
+    
+    // Aktualizuj wykres
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = energyData;
+    chart.data.datasets[1].data = percentageOfInstalled;
+    
+    chart.update('none');
+    
+    // Aktualizuj statystyki
+    this.updateEnergyStatistics({
+        ...data,
+        windGeneration: energyData
+    }, percentageOfInstalled, energyData);
+}
+  /**
+ * Update energy statistics panel (dla PV lub Wind)
+ */
+updateEnergyStatistics(data, percentageOfInstalled, generationArray) {
+    const now = new Date();
+    const isPV = this.currentEnergyView === 'pv';
+    
+    // Jeśli nie przekazano generationArray, spróbuj pobrać
+    if (!generationArray) {
+        generationArray = isPV ? 
+            (data.pvGeneration || []) : 
+            (data.windGeneration || data.gen_wi || data.wind || []);
+    }
+    
+    // Find current or latest data point
+    let currentIndex = generationArray.length - 1;
+    if (data.timestamps && data.timestamps.length > 0) {
+        const tempIndex = data.timestamps.findIndex(ts => 
+            Math.abs(new Date(ts).getTime() - now.getTime()) < 10 * 60 * 1000
+        );
+        if (tempIndex !== -1) currentIndex = tempIndex;
+    }
+    
+    const installedCapacity = isPV ? this.PV_INSTALLED_CAPACITY_MW : this.WIND_INSTALLED_CAPACITY_MW;
+    
+    const currentGen = parseFloat(generationArray[currentIndex]) || 0;
+    const currentPercentage = percentageOfInstalled[currentIndex] || 0;
+    const avgPercentage = this.calculateAverage(percentageOfInstalled.filter(v => v > 0)) || 0;
+    
+    // Znajdź i zaktualizuj elementy statystyk
+    const statsBox = document.getElementById('pv-stats-box');
+    if (statsBox) {
+        // Zmień tytuł nagłówka
+        const chartTitle = document.querySelector('.pv-distribution-chart .chart-title span:last-child');
+        if (chartTitle) {
+            chartTitle.textContent = isPV ? 
+                'Analiza Generacji PV i Wiatru w KSE' : 
+                'Analiza Generacji PV i Wiatru w KSE';
+        }
+        
+        // Aktualizuj statystyki
+        statsBox.innerHTML = `
+            <div class="stat-row">
+                <span class="stat-label">Aktualna generacja ${isPV ? 'PV' : 'Wiatr'}:</span>
+                <span class="stat-value" id="current-pv-gen">${currentGen.toFixed(0)} MW</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Wykorzystanie mocy zainstalowanej:</span>
+                <span class="stat-value" id="current-pv-share">${currentPercentage.toFixed(2)}%</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Średnie wykorzystanie (dziś):</span>
+                <span class="stat-value">${avgPercentage.toFixed(2)}%</span>
+            </div>
+            <div class="stat-row" style="border-top: 1px solid #e5e7eb; padding-top: 6px; margin-top: 6px;">
+                <span class="stat-label" style="font-size: 0.75rem;">Moc zainstalowana ${isPV ? 'PV' : 'Wiatr'}:</span>
+                <span class="stat-value" style="font-size: 0.75rem;">${installedCapacity.toFixed(0)} MW</span>
+            </div>
+        `;
+    }
+}
 
     // ========================================
     // CHART 4: CONSTRAINTS DISPLAY & PSE RESERVES CHART
@@ -2766,5 +2978,4 @@ window.renderForecastKSE = function(data, containerId = 'generation-forecast-cha
 };
 
 console.log('✅ Chart Manager loaded successfully');
-
 
