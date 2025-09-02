@@ -750,25 +750,33 @@ switchView(viewName) {
  */
 async loadGridData() {
     try {
+        console.log(`[GRID] Loading data at ${new Date().toLocaleTimeString()}`);
+        
         // Inicjalizuj wykres jeśli nie istnieje
         if (!window.ChartManager.charts.has('kse-demand')) {
+            console.log('[GRID] Creating KSE demand chart');
             window.ChartManager.createKSEDemandChart();
         }
         
         // Pokaż loading
         this.showChartLoading('kse-demand');
         
-        // Pobierz dane
-        const data = await window.PSEApiService.getKSEDemandData('today');
+        // Pobierz dane z timestamp aby ominąć cache
+        const timestamp = Date.now();
+        const data = await window.PSEApiService.getKSEDemandData('today', timestamp);
+        
+        console.log('[GRID] Data received:', data ? 'YES' : 'NO');
         
         // Aktualizuj wykres
         window.ChartManager.updateKSEDemandChart(data);
+        
+        console.log('[GRID] Chart updated successfully');
         
         // Ukryj loading
         this.hideChartLoading('kse-demand');
         
     } catch (error) {
-        console.error('Failed to load grid data:', error);
+        console.error('[GRID] Failed to load grid data:', error);
         this.hideChartLoading('kse-demand');
         window.UIManager.showNotification('Błąd ładowania danych sieci', 'error');
     }
@@ -1384,4 +1392,5 @@ if ('PerformanceObserver' in window) {
 window.app = window.EnspirionApp;
 
 console.log('✅ Enspirion App loaded successfully');
+
 
