@@ -874,11 +874,17 @@ updateForecastTable(data) {
         this.stopAutoRefresh();
         
         this.intervals.autoRefresh = setInterval(() => {
-            if (this.state.autoRefreshEnabled && !this.state.isLoading) {
-                console.log('[INFO] Automatyczne odświeżanie...');
-                this.loadInitialData();
+        if (this.state.autoRefreshEnabled && !this.state.isLoading) {
+            console.log('[INFO] Automatyczne odświeżanie...');
+            this.loadInitialData();
+            
+            // Dodaj odświeżanie danych sieci jeśli zakładka jest aktywna
+            const gridSection = document.getElementById('grid-section');
+            if (gridSection && gridSection.classList.contains('active')) {
+                this.loadGridData();
             }
-        }, this.config.refreshInterval);
+        }
+    }, this.config.refreshInterval);
         
         // Also refresh forecast data less frequently
         this.intervals.dataRefresh = setInterval(() => {
@@ -1378,3 +1384,4 @@ if ('PerformanceObserver' in window) {
 window.app = window.EnspirionApp;
 
 console.log('✅ Enspirion App loaded successfully');
+
