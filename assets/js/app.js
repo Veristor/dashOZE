@@ -761,11 +761,37 @@ async loadGridData() {
         // Pokaż loading
         this.showChartLoading('kse-demand');
         
-        // Pobierz dane z timestamp aby ominąć cache
-        const timestamp = Date.now();
-        const data = await window.PSEApiService.getKSEDemandData('today', timestamp);
+        // Pobierz dane - bez modyfikacji API
+        const data = await window.PSEApiService.getKSEDemandData('today');
         
         console.log('[GRID] Data received:', data ? 'YES' : 'NO');
+        
+        // Sprawdź czy dane się zmieniły (do debugowania)
+        if (data && this.lastGridData) {
+            const dataChanged = JSON.stringify(data.actual) !== JSON.stringify(this.lastGridData.actual);
+            if (!dataChanged) {
+                console.log('[GRID] Warning: Data might be cached (no changes detected)');
+                
+                // OPCJA: Wymuś odświeżenie wykresu mimo wszystko
+                // Zniszcz i odtwórz wykres co N-te odświeżenie
+                this.gridRefreshCount = (this.gridRefreshCount || 0) + 1;
+                if (this.gridRefreshCount % 10 === 0) {
+                    console.log('[GRID] Force recreating chart after 10 refreshes');
+                    const chart = window.ChartManager.charts.get('kse-demand');
+                    if (chart) {
+                        chart.destroy();
+                        window.ChartManager.charts.delete('kse-demand');
+                        window.ChartManager.createKSEDemandChart();
+                    }
+                }
+            } else {
+                console.log('[GRID] Data changed - updating chart');
+                this.gridRefreshCount = 0; // Reset counter
+            }
+        }
+        
+        // Zapisz dane do porównania
+        this.lastGridData = JSON.parse(JSON.stringify(data));
         
         // Aktualizuj wykres
         window.ChartManager.updateKSEDemandChart(data);
@@ -775,10 +801,26 @@ async loadGridData() {
         // Ukryj loading
         this.hideChartLoading('kse-demand');
         
+        // Aktualizuj timestamp w UI
+        const updateTime = new Date().toLocaleTimeString('pl-PL');
+        const gridUpdateEl = document.querySelector('#grid-section .last-update');
+        if (gridUpdateEl) {
+            gridUpdateEl.textContent = `Ostatnia aktualizacja: ${updateTime}`;
+        }
+        
     } catch (error) {
         console.error('[GRID] Failed to load grid data:', error);
         this.hideChartLoading('kse-demand');
         window.UIManager.showNotification('Błąd ładowania danych sieci', 'error');
+        
+        // Jeśli błąd, spróbuj użyć danych z mock
+        try {
+            console.log('[GRID] Attempting to use mock data after error');
+            const mockData = window.PSEApiService.getMockKSEDemandData('today');
+            window.ChartManager.updateKSEDemandChart(mockData);
+        } catch (mockError) {
+            console.error('[GRID] Mock data also failed:', mockError);
+        }
     }
 }
 
@@ -1392,5 +1434,6 @@ if ('PerformanceObserver' in window) {
 window.app = window.EnspirionApp;
 
 console.log('✅ Enspirion App loaded successfully');
+
 
 
